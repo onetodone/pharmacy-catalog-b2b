@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common'
 import { Role } from '@prisma/client'
 import { UsersService } from './users.service'
 import { Roles } from '../common/decorators/roles.decorator'
@@ -19,7 +19,25 @@ export class UsersController {
 
   @Post('me/password')
   changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
-    return this.service.changePassword(user.id, dto)
+    return this.service.changePassword(user.id, user.sid, dto)
+  }
+
+  // --- Session management (self-service) ---
+
+  @Get('me/sessions')
+  listSessions(@CurrentUser() user: AuthUser) {
+    return this.service.listSessions(user.id, user.sid)
+  }
+
+  @Delete('me/sessions/:id')
+  @HttpCode(204)
+  revokeSession(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.revokeSession(user.id, id)
+  }
+
+  @Delete('me/sessions')
+  revokeOtherSessions(@CurrentUser() user: AuthUser) {
+    return this.service.revokeOtherSessions(user.id, user.sid)
   }
 
   // --- Admin only ---

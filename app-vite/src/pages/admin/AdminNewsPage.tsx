@@ -5,6 +5,7 @@ import { api, apiError } from '@/lib/api'
 import { dateTime } from '@/lib/format'
 import type { Paginated, Post } from '@/lib/types'
 import { PageHeader } from '@/components/PageHeader'
+import { useConfirm } from '@/context/confirm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,6 +36,7 @@ import { toast } from '@/components/ui/sonner'
 
 export function AdminNewsPage() {
   const qc = useQueryClient()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<
     { mode: 'create' } | { mode: 'edit'; post: Post } | null
   >(null)
@@ -130,8 +132,15 @@ export function AdminNewsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => {
-                            if (confirm('Delete this post?'))
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: 'Delete this post?',
+                                description: 'The news post will be permanently removed.',
+                                confirmText: 'Delete',
+                                destructive: true,
+                              })
+                            )
                               remove.mutate(post.id)
                           }}
                         >

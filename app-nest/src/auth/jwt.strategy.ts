@@ -4,10 +4,13 @@ import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuthUser } from '../common/auth-user'
+import { resolveJwtSecret } from './jwt-config'
 
-interface JwtPayload {
+export interface JwtPayload {
   sub: number
   role: string
+  /** Session id — the access token is only valid while this Session row exists. */
+  sid: string
 }
 
 @Injectable()
@@ -19,22 +22,30 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // Must match the secret AuthModule signs with (see AuthModule note).
-      secretOrKey: config.get<string>('JWT_SECRET', 'dev-only-change-me-please'),
+      secretOrKey: resolveJwtSecret(config),
     })
   }
 
   async validate(payload: JwtPayload): Promise<AuthUser> {
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } })
-    if (!user || user.banned || !user.approved) {
-      throw new UnauthorizedException('Account is not active')
+    const session = payload.sid
+      ? await this.prisma.session.findUnique({
+          where: { id: payload.sid },
+          include: { user: true },
+        })
+      : null
+
+    const user = session?.user
+    if (!session || !user || user.banned || !user.approved || session.expiresAt < new Date()) {
+      throw new UnauthorizedException('Session is not active')
     }
+
     return {
       id: user.id,
       login: user.login,
       name: user.name,
       email: user.email,
       role: user.role,
+      sid: session.id,
     }
   }
 }

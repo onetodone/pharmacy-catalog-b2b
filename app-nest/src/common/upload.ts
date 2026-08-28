@@ -7,7 +7,6 @@ import type { Request } from 'express'
 
 const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp'])
 
-/** Multer options for a single image upload written to `uploads/<subdir>`. */
 export function imageUpload(subdir: string) {
   const dest = join(process.cwd(), 'uploads', subdir)
   if (!existsSync(dest)) mkdirSync(dest, { recursive: true })
@@ -30,7 +29,6 @@ export function imageUpload(subdir: string) {
   }
 }
 
-/** Relative path stored on the entity, e.g. "products/uuid.jpg". */
 export function relativeUploadPath(subdir: string, file: Express.Multer.File) {
   return `${subdir}/${file.filename}`
 }

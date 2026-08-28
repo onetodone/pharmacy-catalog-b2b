@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { api, TOKEN_KEY } from '@/lib/api'
+import { api, setAccessToken } from '@/lib/api'
 import type { User } from '@/lib/types'
 
 interface AuthContextValue {
@@ -20,50 +20,68 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
+interface SessionResponse {
+  accessToken: string
+  user: User
+}
+
+// Module-scoped single-flight guard: React StrictMode mounts effects twice in
+// dev, which would otherwise fire two /auth/refresh calls — the backend rotates
+// the refresh token on every use, so the second would race the first and fail,
+// clobbering a just-restored session.
+let bootstrapPromise: Promise<SessionResponse | null> | null = null
+
+function bootstrapSession(): Promise<SessionResponse | null> {
+  if (!bootstrapPromise) {
+    bootstrapPromise = api
+      .post<SessionResponse>('/auth/refresh')
+      .then((res) => res.data)
+      .catch(() => null)
+      .finally(() => {
+        bootstrapPromise = null
+      })
+  }
+  return bootstrapPromise
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = async () => {
-    const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) {
+    const session = await bootstrapSession()
+    if (session) {
+      setAccessToken(session.accessToken)
+      setUser(session.user)
+    } else {
+      setAccessToken(null)
       setUser(null)
-      setLoading(false)
-      return
     }
-    try {
-      const { data } = await api.get<User>('/auth/me')
-      setUser(data)
-    } catch {
-      localStorage.removeItem(TOKEN_KEY)
-      setUser(null)
-    } finally {
-      setLoading(false)
-    }
+    setLoading(false)
   }
 
   useEffect(() => {
-    // One-shot session restore on mount: syncs React state with localStorage
-    // and the /auth/me endpoint. The setState calls here are intentional.
+    // One-shot session restore on mount: exchange the httpOnly refresh cookie
+    // for an access token. The setState calls here are intentional.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh()
   }, [])
 
   const login = async (loginName: string, password: string) => {
-    const { data } = await api.post<{ accessToken: string; user: User }>(
-      '/auth/login',
-      {
-        login: loginName,
-        password,
-      },
-    )
-    localStorage.setItem(TOKEN_KEY, data.accessToken)
+    const { data } = await api.post<SessionResponse>('/auth/login', {
+      login: loginName,
+      password,
+    })
+    setAccessToken(data.accessToken)
     setUser(data.user)
     return data.user
   }
 
   const logout = () => {
-    localStorage.removeItem(TOKEN_KEY)
+    // Best-effort: delete the server-side session and clear the cookie. Local
+    // state is cleared regardless of whether the call succeeds.
+    void api.post('/auth/logout').catch(() => undefined)
+    setAccessToken(null)
     setUser(null)
   }
 

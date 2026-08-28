@@ -12,6 +12,7 @@ import type { Paginated, Role, User } from '@/lib/types'
 import { PageHeader } from '@/components/PageHeader'
 import { Pagination } from '@/components/Pagination'
 import { RoleBadge, UserStatusBadge } from '@/components/badges'
+import { useConfirm } from '@/context/confirm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -75,6 +76,7 @@ const emptyForm: UserForm = {
 
 export function UsersPage() {
   const qc = useQueryClient()
+  const confirm = useConfirm()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [role, setRole] = useState(ALL)
@@ -298,8 +300,16 @@ export function UsersPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => {
-                            if (confirm(`Delete ${u.name}?`))
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: `Delete ${u.name}?`,
+                                description:
+                                  'The account is permanently removed. Ban it instead if it has related data.',
+                                confirmText: 'Delete',
+                                destructive: true,
+                              })
+                            )
                               remove.mutate(u.id)
                           }}
                         >

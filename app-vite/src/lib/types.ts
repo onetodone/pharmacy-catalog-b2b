@@ -20,6 +20,16 @@ export interface User {
   updatedAt: string
 }
 
+export interface Session {
+  id: string
+  userAgent: string | null
+  ipAddress: string | null
+  expiresAt: string
+  createdAt: string
+  updatedAt: string
+  isCurrent: boolean
+}
+
 export interface Category {
   id: number
   name: string

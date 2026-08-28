@@ -147,16 +147,54 @@ export class UsersService {
     return publicUser(updated)
   }
 
-  async changePassword(id: number, dto: ChangePasswordDto) {
+  async changePassword(id: number, currentSessionId: string, dto: ChangePasswordDto) {
     const user = await this.getOrFail(id)
     if (!(await bcrypt.compare(dto.currentPassword, user.passwordHash))) {
       throw new UnauthorizedException('Current password is incorrect')
     }
-    await this.prisma.user.update({
-      where: { id },
-      data: { passwordHash: await bcrypt.hash(dto.newPassword, 10) },
-    })
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id },
+        data: { passwordHash: await bcrypt.hash(dto.newPassword, 10) },
+      }),
+      // A password change invalidates every other device — keep only the
+      // session that made the change signed in.
+      this.prisma.session.deleteMany({ where: { userId: id, NOT: { id: currentSessionId } } }),
+    ])
     return { ok: true }
+  }
+
+  // --- Sessions -----------------------------------------------------------
+
+  async listSessions(userId: number, currentSessionId: string) {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        userAgent: true,
+        ipAddress: true,
+        expiresAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+    return sessions.map((session) => ({ ...session, isCurrent: session.id === currentSessionId }))
+  }
+
+  // Scoped by userId as well as id: the id comes from the URL, so an unscoped
+  // delete would let any user revoke someone else's session by guessing a
+  // cuid (IDOR). 404 on a miss rather than 403 — don't confirm the id exists.
+  async revokeSession(userId: number, id: string) {
+    const { count } = await this.prisma.session.deleteMany({ where: { id, userId } })
+    if (count === 0) throw new NotFoundException('Session not found')
+  }
+
+  async revokeOtherSessions(userId: number, currentSessionId: string) {
+    const { count } = await this.prisma.session.deleteMany({
+      where: { userId, NOT: { id: currentSessionId } },
+    })
+    return { count }
   }
 
   private async getOrFail(id: number) {

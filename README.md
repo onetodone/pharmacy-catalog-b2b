@@ -88,8 +88,13 @@ Seeded by `pnpm db:seed`. **Password for all accounts: `11111111`.**
                                                           └─────────────────┘
 ```
 
-- **Auth**: stateless JWT (HS256), sent as `Authorization: Bearer <token>`, stored in the
-  browser's `localStorage`. No refresh tokens / sessions.
+- **Auth**: short-lived access JWT (HS256, `15m`) sent as `Authorization: Bearer <token>` and
+  held **in memory only** by the SPA. A long-lived refresh token lives in an **httpOnly,
+  `SameSite=Lax` cookie** scoped to `/api/auth` and is backed by a `Session` row per login
+  (`POST /auth/refresh` rotates the token in place, `POST /auth/logout` deletes the row). The
+  access token carries the session id (`sid`), so revoking a session (logout, "sign out other
+  devices", or a password change) invalidates its access tokens immediately. `POST /auth/login`
+  / `register` / `refresh` are rate-limited to 10 req/min per IP.
 - **API base path**: `/api`. Uploaded files are served from `/uploads`.
 - In development the Vite dev server proxies `/api` and `/uploads` to the API. In production a
   reverse proxy is expected to route both to `app-nest` (or set `VITE_API_URL` /
@@ -130,7 +135,7 @@ Two global guards (registered in [`app.module.ts`](./app-nest/src/app.module.ts)
 
 ### Data model ([`prisma/schema.prisma`](./app-nest/prisma/schema.prisma))
 
-`User` · `Category` · `Manufacturer` · `Product` · `Order` · `OrderItem` · `Post`
+`User` · `Session` · `Category` · `Manufacturer` · `Product` · `Order` · `OrderItem` · `Post`
 
 - Enums: `Role` (`ADMIN` / `SUPPLIER` / `CUSTOMER`), `OrderStatus`
   (`PENDING` → `PROCESSING` → `SHIPPED` → `DELIVERED`, or `CANCELLED`),
@@ -145,8 +150,8 @@ Two global guards (registered in [`app.module.ts`](./app-nest/src/app.module.ts)
 
 | Module | Endpoints | Access |
 |---|---|---|
-| `auth` | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` | public / self |
-| `users` | `PATCH /users/me`, `POST /users/me/password`, `GET /users`, `GET /users/:id`, `POST /users`, `PATCH /users/:id`, `PATCH /users/:id/approve`, `PATCH /users/:id/ban`, `DELETE /users/:id` | `me*` = self · rest = ADMIN |
+| `auth` | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | public / self |
+| `users` | `PATCH /users/me`, `POST /users/me/password`, `GET /users/me/sessions`, `DELETE /users/me/sessions/:id`, `DELETE /users/me/sessions`, `GET /users`, `GET /users/:id`, `POST /users`, `PATCH /users/:id`, `PATCH /users/:id/approve`, `PATCH /users/:id/ban`, `DELETE /users/:id` | `me*` = self · rest = ADMIN |
 | `categories` | `GET` · `POST` / `PATCH /:id` / `DELETE /:id` | read: any · write: ADMIN |
 | `manufacturers` | `GET` · `POST` / `PATCH /:id` / `DELETE /:id` | read: any · write: ADMIN |
 | `products` | `GET` (list, filtered + paginated), `GET /:id`, `POST`, `PATCH /:id`, `DELETE /:id`, `POST /:id/cover` (multipart) | list/detail scoped by role · write: ADMIN + SUPPLIER (own) |
@@ -165,8 +170,9 @@ only non-archived products and their own orders; `ADMIN` sees everything.
 | `PORT` | `3300` | API port (NestFactory falls back to `3000` if unset) |
 | `CORS_ORIGIN` | `http://localhost:5174,http://localhost:4300` | comma-separated allowed origins |
 | `DATABASE_URL` | `postgresql://postgres:root@localhost:5432/pharmacy_catalog?schema=public` | read by `prisma.config.ts` (CLI) and the adapter (runtime) |
-| `JWT_SECRET` | *(change in production)* | HS256 signing secret — resolved via `ConfigService` |
-| `JWT_EXPIRES_IN` | `1h` | token lifetime |
+| `JWT_SECRET` | *(required in production)* | HS256 signing secret — resolved via `ConfigService`. In production the app **refuses to boot** while it is empty or still the placeholder. |
+| `JWT_EXPIRES_IN` | `15m` | access-token lifetime |
+| `JWT_REFRESH_EXPIRES_IN` | `30d` | refresh-token / session lifetime |
 | `MIN_ORDER_TOTAL` | `0` | minimum order total (USD) enforced at checkout; `0` disables it. |
 
 ### Scripts (`app-nest`)
@@ -299,11 +305,14 @@ Root (`package.json`) — run across the whole workspace:
 
 ### Auth & security
 
-- [ ] **Refresh tokens + httpOnly cookies** instead of a long-lived JWT in `localStorage`
-      (current setup is vulnerable to XSS token theft and cannot revoke tokens).
-- [ ] Rate limiting / brute-force protection on `POST /auth/login`.
+- [x] **Refresh tokens + httpOnly cookies** instead of a long-lived JWT in `localStorage` —
+      access token is now in-memory only, refresh token is an httpOnly cookie backed by a
+      `Session` row; sessions are revocable (see the profile page).
+- [x] Rate limiting / brute-force protection on `POST /auth/login` — `@nestjs/throttler`,
+      10 req/min per IP on the credential endpoints.
 - [ ] Password-reset flow (needs the transactional email that was dropped).
-- [ ] Real `JWT_SECRET` management for production (`.env.example` still ships a placeholder).
+- [x] Real `JWT_SECRET` management for production — the app refuses to boot in production
+      while `JWT_SECRET` is empty or left at the `.env.example` placeholder.
 
 ### Backend
 
