@@ -145,6 +145,8 @@ Two global guards (registered in [`app.module.ts`](./app-nest/src/app.module.ts)
 - `Order.code` = `SSS-NNNNN` (zero-padded supplier id + zero-padded order id).
 - `Product.price`, `Order.totalPrice`, `OrderItem.price/totalPrice` are `Decimal(10,2)` —
   they serialize to **strings** over JSON; the frontend coerces with `Number(...)`.
+- Every model is `@@map`-ped to a **snake_case, plural table name** (`users`, `order_items`, …);
+  Prisma Client access still uses the model name (`prisma.orderItem`).
 
 ### API surface (all under `/api`)
 
