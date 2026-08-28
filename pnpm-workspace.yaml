@@ -1,0 +1,23 @@
+packages:
+  - app-nest
+  - app-vite
+
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+
+minimumReleaseAgeExclude:
+  - multer@2.3.0
+  - '@vitejs/plugin-react@6.1.1'
+  - lucide-react@1.35.0
+  - react-router-dom@7.18.3
+  - react-router@7.18.3
+  - zod@4.5.1
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - esbuild

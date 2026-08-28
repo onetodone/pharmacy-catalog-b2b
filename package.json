@@ -1,0 +1,27 @@
+{
+  "name": "@onetodone/pharmacy-catalog-js-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "B2B pharmacy catalog — a multi-vendor wholesale shop. pnpm monorepo with a NestJS + Prisma API and a Vite + React SPA.",
+  "author": {
+    "name": "Anton Holubeu",
+    "url": "https://github.com/aholu"
+  },
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@11.24.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "start:api": "pnpm --filter ./app-nest start:dev",
+    "start:web": "pnpm --filter ./app-vite dev",
+    "db:migrate": "pnpm --filter ./app-nest exec prisma migrate dev",
+    "db:seed": "pnpm --filter ./app-nest exec prisma db seed",
+    "db:reset": "pnpm --filter ./app-nest exec prisma migrate reset"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=11"
+  }
+}

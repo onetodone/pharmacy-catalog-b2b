@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+.DS_Store
+app-nest/uploads/*
+!app-nest/uploads/.gitkeep
+CLAUDE.md
+PROGRESS.md
