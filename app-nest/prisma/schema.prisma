@@ -1,0 +1,142 @@
+// Simplified schema for the Pharmacy Catalog rewrite.
+// Multi-vendor B2B shop: ADMIN runs the platform, SUPPLIER owns products and fulfils
+// orders, CUSTOMER browses the catalog and checks out (one order per supplier).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  SUPPLIER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  DECLINED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  login        String   @unique
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  approved     Boolean  @default(false) // customer self-signup waits for admin approval
+  banned       Boolean  @default(false)
+  avatar       String?
+
+  // Customer profile fields (only meaningful for CUSTOMER).
+  phone       String?
+  taxId       String?
+  managerName String?
+  address     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedProducts  Product[] @relation("ProductOwner")
+  customerOrders Order[]   @relation("CustomerOrders")
+  supplierOrders Order[]   @relation("SupplierOrders")
+  posts          Post[]
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Manufacturer {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Product {
+  id             Int      @id @default(autoincrement())
+  name           String
+  code           String   @unique
+  price          Decimal  @db.Decimal(10, 2)
+  quantity       Int      @default(0)
+  description    String   @default("")
+  cover          String?
+  archived       Boolean  @default(false) // soft delete (order history keeps referencing)
+  categoryId     Int
+  manufacturerId Int
+  ownerId        Int // the SUPPLIER who sells this product
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  category     Category     @relation(fields: [categoryId], references: [id])
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+  owner        User         @relation("ProductOwner", fields: [ownerId], references: [id])
+  orderItems   OrderItem[]
+
+  @@index([ownerId])
+  @@index([categoryId])
+  @@index([manufacturerId])
+}
+
+model Order {
+  id            Int           @id @default(autoincrement())
+  code          String        @unique // "SSS-NNNNN" -> supplierId(3) + counter(5)
+  customerId    Int
+  supplierId    Int
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(UNPAID)
+  totalPrice    Decimal       @db.Decimal(10, 2)
+  note          String        @default("")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customer User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  supplier User        @relation("SupplierOrders", fields: [supplierId], references: [id])
+  items    OrderItem[]
+
+  @@index([customerId])
+  @@index([supplierId])
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  orderId    Int
+  productId  Int
+  quantity   Int
+  price      Decimal @db.Decimal(10, 2) // unit price snapshot at checkout
+  totalPrice Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  authorId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id])
+}
