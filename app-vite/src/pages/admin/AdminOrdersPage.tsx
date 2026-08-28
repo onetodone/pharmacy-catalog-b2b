@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { dateTime, money } from '@/lib/format'
 import { useAuth } from '@/context/auth'
+import { useConfirm } from '@/context/confirm'
 import {
   allowedNextStatuses,
   ORDER_STATUSES,
@@ -40,6 +41,7 @@ const ALL = 'all'
 
 export function AdminOrdersPage() {
   const { user } = useAuth()
+  const confirm = useConfirm()
   const isAdmin = user?.role === 'ADMIN'
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState(ALL)
@@ -209,8 +211,15 @@ export function AdminOrdersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              if (confirm(`Delete order ${order.code}?`))
+                            onClick={async () => {
+                              if (
+                                await confirm({
+                                  title: `Delete order ${order.code}?`,
+                                  description: 'This permanently removes the order and its items.',
+                                  confirmText: 'Delete',
+                                  destructive: true,
+                                })
+                              )
                                 deleteOrder.mutate(order.id)
                             }}
                           >

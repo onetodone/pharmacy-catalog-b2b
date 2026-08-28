@@ -1,41 +1,71 @@
-import axios, { AxiosError } from 'axios'
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
-export const TOKEN_KEY = 'pharmacy.token'
-
-/**
- * API base URL. Defaults to the relative `/api` path — same origin as the SPA,
- * which the Vite dev server proxies to the API in development and a reverse
- * proxy is expected to route in production. Set `VITE_API_URL` to point at a
- * different origin (e.g. when the API is deployed on its own host).
- */
 const API_URL = import.meta.env.VITE_API_URL ?? '/api'
-
-/** Base URL for uploaded assets. Relative `/uploads` by default (see `API_URL`). */
 const ASSETS_URL = import.meta.env.VITE_ASSETS_URL ?? '/uploads'
 
-export const api = axios.create({ baseURL: API_URL })
+let accessToken: string | null = null
+export const setAccessToken = (token: string | null) => {
+  accessToken = token
+}
+export const getAccessToken = () => accessToken
+
+export const api = axios.create({ baseURL: API_URL, withCredentials: true })
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY)
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
   return config
 })
 
+const AUTH_LOGIN = '/auth/login'
+const AUTH_REFRESH = '/auth/refresh'
+
+let refreshPromise: Promise<string> | null = null
+
+function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post<{ accessToken: string }>(AUTH_REFRESH)
+      .then((res) => {
+        setAccessToken(res.data.accessToken)
+        return res.data.accessToken
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+interface RetryableConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean
+}
+
 api.interceptors.response.use(
   (res) => res,
-  (error: AxiosError) => {
-    if (
-      error.response?.status === 401 &&
-      !location.pathname.startsWith('/login')
-    ) {
-      localStorage.removeItem(TOKEN_KEY)
-      location.assign('/login')
+  async (error: AxiosError) => {
+    const config = error.config as RetryableConfig | undefined
+    const url = config?.url ?? ''
+    const status = error.response?.status
+
+    const isAuthEndpoint =
+      url.includes(AUTH_LOGIN) || url.includes(AUTH_REFRESH)
+
+    if (status === 401 && !isAuthEndpoint && config && !config._retry) {
+      config._retry = true
+      try {
+        const token = await refreshAccessToken()
+        config.headers.Authorization = `Bearer ${token}`
+        return api(config)
+      } catch {
+        setAccessToken(null)
+        if (!location.pathname.startsWith('/login')) location.assign('/login')
+      }
     }
+
     return Promise.reject(error)
   },
 )
 
-/** Extract a human-readable message from an axios error. */
 export function apiError(
   error: unknown,
   fallback = 'Something went wrong',
@@ -51,7 +81,6 @@ export function apiError(
   return fallback
 }
 
-/** Absolute URL for an uploaded asset stored as a relative path. */
 export function assetUrl(path: string | null | undefined): string | undefined {
   return path ? `${ASSETS_URL}/${path}` : undefined
 }

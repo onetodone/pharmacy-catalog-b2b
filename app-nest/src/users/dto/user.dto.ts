@@ -107,7 +107,6 @@ export class BanUserDto {
   banned!: boolean
 }
 
-/** Self-service profile update (used by /users/me from any authenticated role). */
 export class UpdateMeDto {
   @IsOptional()
   @IsString()

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from '@/components/ui/sonner'
+import { SessionsList } from '@/components/SessionsList'
 
 export function AdminProfilePage() {
   const { user, setUser } = useAuth()
@@ -119,6 +120,15 @@ export function AdminProfilePage() {
               Update password
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Active sessions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SessionsList />
         </CardContent>
       </Card>
     </div>

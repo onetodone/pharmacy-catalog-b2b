@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/sonner'
+import { SessionsList } from '@/components/SessionsList'
 
 const PROFILE_FIELDS: Array<{
   name: keyof ProfileForm
@@ -70,6 +71,7 @@ export function ShopProfilePage() {
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="password">Password</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -150,6 +152,17 @@ export function ShopProfilePage() {
                   Update password
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Active sessions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SessionsList />
             </CardContent>
           </Card>
         </TabsContent>
