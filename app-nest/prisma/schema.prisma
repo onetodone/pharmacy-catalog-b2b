@@ -56,6 +56,8 @@ model User {
   supplierOrders Order[]   @relation("SupplierOrders")
   posts          Post[]
   sessions       Session[]
+
+  @@map("users")
 }
 
 model Session {
@@ -71,6 +73,7 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@map("sessions")
 }
 
 model Category {
@@ -78,6 +81,8 @@ model Category {
   name      String    @unique
   createdAt DateTime  @default(now())
   products  Product[]
+
+  @@map("categories")
 }
 
 model Manufacturer {
@@ -85,6 +90,8 @@ model Manufacturer {
   name      String    @unique
   createdAt DateTime  @default(now())
   products  Product[]
+
+  @@map("manufacturers")
 }
 
 model Product {
@@ -110,6 +117,7 @@ model Product {
   @@index([ownerId])
   @@index([categoryId])
   @@index([manufacturerId])
+  @@map("products")
 }
 
 model Order {
@@ -130,6 +138,7 @@ model Order {
 
   @@index([customerId])
   @@index([supplierId])
+  @@map("orders")
 }
 
 model OrderItem {
@@ -144,6 +153,7 @@ model OrderItem {
   product Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
+  @@map("order_items")
 }
 
 model Post {
@@ -155,4 +165,6 @@ model Post {
   updatedAt DateTime @updatedAt
 
   author User @relation(fields: [authorId], references: [id])
+
+  @@map("posts")
 }
