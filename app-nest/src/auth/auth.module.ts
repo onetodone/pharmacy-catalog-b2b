@@ -11,7 +11,13 @@ import { getAccessTokenTtl, resolveJwtSecret } from './jwt-config'
 @Module({
   imports: [
     PassportModule,
-    ThrottlerModule.forRoot([{ name: 'auth', ttl: 60_000, limit: 10 }]),
+    ThrottlerModule.forRoot([
+      {
+        name: 'auth',
+        ttl: Number(process.env.THROTTLE_TTL ?? 60_000),
+        limit: Number(process.env.THROTTLE_LIMIT ?? 10),
+      },
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

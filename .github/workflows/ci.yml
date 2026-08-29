@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, typecheck & lint
+    runs-on: ubuntu-latest
+    env:
+      # Prisma's config (app-nest/prisma.config.ts) requires DATABASE_URL to be
+      # present even for `prisma generate`, which runs on `pnpm install`. No
+      # database is contacted during the build.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/pharmacy_catalog?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (app-nest + app-vite)
+        run: pnpm -r build
+
+      - name: Typecheck
+        run: pnpm -r --if-present typecheck
+
+      - name: Lint
+        run: pnpm -r lint
+
+  test:
+    name: Backend tests (unit + e2e)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pharmacy_catalog_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pharmacy_catalog_test?schema=public
+      JWT_SECRET: ci-e2e-secret-not-for-production
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 30d
+      MIN_ORDER_TOTAL: 0
+      THROTTLE_LIMIT: 1000
+      THROTTLE_TTL: 60000
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: pnpm --filter ./app-nest test
+
+      # e2e migrates the test DB itself (test/global-setup.ts).
+      - name: e2e tests
+        run: pnpm --filter ./app-nest test:e2e
