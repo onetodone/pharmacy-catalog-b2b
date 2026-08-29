@@ -1,0 +1,11 @@
+{
+  // Test build. NestJS 12 ships ESM-only `.js`, so ts-jest also has to transpile
+  // those (allowJs) — Jest's transformIgnorePatterns whitelists just @nestjs.
+  // Everything else mirrors the app's CommonJS build.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "types": ["node", "jest"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}
