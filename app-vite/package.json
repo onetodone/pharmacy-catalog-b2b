@@ -2,7 +2,7 @@
   "name": "@onetodone/pharmacy-catalog-vite-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Pharmacy Catalog web client — Vite + React + Tailwind CSS v4 + shadcn/ui SPA for the B2B pharmacy shop.",
+  "description": "Pharmacy Catalog web client — Vite + React + Tailwind CSS v4 + shadcn/ui SPA for the pharmacy shop.",
   "author": {
     "name": "Anton Holubeu",
     "url": "https://github.com/aholu"

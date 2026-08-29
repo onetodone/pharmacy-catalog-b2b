@@ -2,7 +2,7 @@
   "name": "@onetodone/pharmacy-catalog-js-app",
   "version": "1.0.0",
   "private": true,
-  "description": "B2B pharmacy catalog — a multi-vendor wholesale shop. pnpm monorepo with a NestJS + Prisma API and a Vite + React SPA.",
+  "description": "Pharmacy catalog — a multi-vendor wholesale shop. pnpm monorepo with a NestJS + Prisma API and a Vite + React SPA.",
   "author": {
     "name": "Anton Holubeu",
     "url": "https://github.com/aholu"

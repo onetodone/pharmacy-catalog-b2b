@@ -1,5 +1,5 @@
 // Simplified schema for the Pharmacy Catalog rewrite.
-// Multi-vendor B2B shop: ADMIN runs the platform, SUPPLIER owns products and fulfils
+// Multi-vendor shop: ADMIN runs the platform, SUPPLIER owns products and fulfils
 // orders, CUSTOMER browses the catalog and checks out (one order per supplier).
 
 generator client {

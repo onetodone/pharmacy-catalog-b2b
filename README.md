@@ -1,6 +1,6 @@
 # Pharmacy Catalog
 
-A B2B (wholesale) multi-vendor pharmacy shop. `ADMIN` runs the platform, `SUPPLIER` owns products and fulfils
+A B2B/B2C (wholesale) multi-vendor pharmacy shop. `ADMIN` runs the platform, `SUPPLIER` owns products and fulfils
 orders, `CUSTOMER` browses the catalog and checks out (one order per supplier).
 
 The repository is a **pnpm workspace** with two packages:

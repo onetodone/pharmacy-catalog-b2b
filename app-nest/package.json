@@ -2,7 +2,7 @@
   "name": "@onetodone/pharmacy-catalog-nest-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Pharmacy Catalog API — NestJS + Prisma backend for the B2B pharmacy shop (auth, catalog, multi-vendor orders, file uploads).",
+  "description": "Pharmacy Catalog API — NestJS + Prisma backend for the pharmacy shop (auth, catalog, multi-vendor orders, file uploads).",
   "author": {
     "name": "Anton Holubeu",
     "url": "https://github.com/aholu"
